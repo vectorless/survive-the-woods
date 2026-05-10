@@ -7,7 +7,7 @@ export const WORLD = {
   campfire: { x: 2620, y: 2480, warmRadius: 160 },
   bushCount: 27,
   treeCount: 54,
-  rockCount: 300,
+  rockCount: 60,
   stickCount: 48,
   mushroomCount: 36,
   pondCount: 12,
@@ -93,10 +93,9 @@ export const MINE = {
   height: 4400,
   entrance: { x: 2160, y: 2560 }, // position in the forest world (near tent)
   shaftTop: 120,                  // y of the ladder/exit
-  rockCount: 2100,
+  rockCount: 420,
   crystalPodCount: 66,
-  spawnPad: 96,
-  rockSpawnPad: 40   // tighter pad just for mine rocks so 2100 of them fit
+  spawnPad: 96
 };
 
 // Roll order for crystal pods. Probabilities sum to 1; the loop in
