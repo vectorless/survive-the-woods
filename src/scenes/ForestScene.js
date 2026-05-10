@@ -413,8 +413,8 @@ export class ForestScene extends Phaser.Scene {
       // Axis-separated collision against placed room walls — gives sliding.
       const tryX = w.visual.x + stepX;
       const tryY = w.visual.y + stepY;
-      if (!this.posBlockedByRoom(tryX, w.visual.y)) w.visual.x = tryX;
-      if (!this.posBlockedByRoom(w.visual.x, tryY)) w.visual.y = tryY;
+      if (!this.posBlockedByBuild(tryX, w.visual.y)) w.visual.x = tryX;
+      if (!this.posBlockedByBuild(w.visual.x, tryY)) w.visual.y = tryY;
       w.visual.scaleX = dx < 0 ? -1 : 1;
 
       // Bite — once per cooldown. Priority: bite player if reachable & not in
@@ -431,9 +431,9 @@ export class ForestScene extends Phaser.Scene {
           this.burstParticles(this.player.x, this.player.y, { colors: [0xd13a3a, 0x6a1818], count: partCount, size: 4, speed: 160, life: 520 });
           didSomething = true;
         } else {
-          const room = this.nearestBiteableRoom(w);
-          if (room) {
-            this.damageRoom(room, w);
+          const build = this.nearestBiteableBuild(w);
+          if (build) {
+            this.damageBuild(build, w);
             didSomething = true;
           } else if (playerReach && this.playerInRoom()) {
             this.burstParticles(this.player.x, this.player.y, { colors: [0xc4a47a, 0xf4e4bc], count: 12, size: 3, speed: 70, life: 360, drift: -10 });
@@ -530,63 +530,86 @@ export class ForestScene extends Phaser.Scene {
     return Math.min(WOLF_SCALE.speedCap, WOLF.speed + days * WOLF_SCALE.speedBonus);
   }
 
-  // --- Wolf vs room geometry ---------------------------------------------
+  // --- Wolf vs build (rooms + turrets) -----------------------------------
 
-  // True if the (expanded) AABB of any placed room contains (x, y).
+  // Iterate every placed build (rooms + turrets). Wolves treat them the same
+  // way: blocked movement, biteable target, HP that ticks down.
+  allBuilds() {
+    return [...this.rooms.values(), ...this.turrets.values()];
+  }
+
+  // True if the (expanded) AABB of any placed build contains (x, y).
   // Padded by wolf radius so the wolf snout can't poke into the floor.
-  posBlockedByRoom(x, y) {
+  posBlockedByBuild(x, y) {
     const s = BUILDING.cellSize;
     const r = WOLF.radius + 2;
-    for (const room of this.rooms.values()) {
-      const minX = room.cell.gx * s - r;
-      const minY = room.cell.gy * s - r;
-      const maxX = (room.cell.gx + 1) * s + r;
-      const maxY = (room.cell.gy + 1) * s + r;
+    for (const b of this.allBuilds()) {
+      const minX = b.cell.gx * s - r;
+      const minY = b.cell.gy * s - r;
+      const maxX = (b.cell.gx + 1) * s + r;
+      const maxY = (b.cell.gy + 1) * s + r;
       if (x > minX && x < maxX && y > minY && y < maxY) return true;
     }
     return false;
   }
 
-  // Closest room within bite reach of this wolf, or null.
-  nearestBiteableRoom(wolf) {
+  // Closest build (room or turret) within bite reach of this wolf, or null.
+  nearestBiteableBuild(wolf) {
     const wx = wolf.visual.x, wy = wolf.visual.y;
     const s = BUILDING.cellSize;
     const reach = WOLF.radius + 6;
     let best = null, bestD = Infinity;
-    for (const room of this.rooms.values()) {
-      const rx = room.cell.gx * s, ry = room.cell.gy * s;
+    for (const b of this.allBuilds()) {
+      const rx = b.cell.gx * s, ry = b.cell.gy * s;
       const cx = Math.max(rx, Math.min(wx, rx + s));
       const cy = Math.max(ry, Math.min(wy, ry + s));
       const dist = Math.hypot(wx - cx, wy - cy);
-      if (dist <= reach && dist < bestD) { best = room; bestD = dist; }
+      if (dist <= reach && dist < bestD) { best = b; bestD = dist; }
     }
     return best;
   }
 
-  damageRoom(room, wolf) {
+  buildLabel(b) {
+    if (b.isTurret) return `${b.type} turret `;
+    if (b.isDiamond) return 'diamond ';
+    if (b.isMetal) return 'metal ';
+    return '';
+  }
+
+  buildBurstColors(b) {
+    if (b.isTurret) return [b.bulletColor || 0xfff4e4, 0xfff4e4, 0x4a4a52];
+    if (b.isDiamond) return [0x9ce6ee, 0xffffff, 0x6ad8e8];
+    if (b.isMetal) return [0x5a6a7a, 0x9aaab8, 0xc4d4e4];
+    return [0x6b3a1f, 0x8a5b3a, 0xf4e4bc];
+  }
+
+  damageBuild(build, wolf) {
     const dmg = wolf.isBoss ? BOSS.roomDamage : 1;
-    room.hp = (room.hp ?? BUILDING.roomHp) - dmg;
-    // Quick scale pulse for hit feedback.
-    this.tweens.add({ targets: room.visual, scale: wolf.isBoss ? 0.88 : 0.94, duration: 70, yoyo: true });
+    build.hp = (build.hp ?? BUILDING.roomHp) - dmg;
+    this.tweens.add({ targets: build.visual, scale: wolf.isBoss ? 0.88 : 0.94, duration: 70, yoyo: true });
     this.burstParticles(wolf.visual.x, wolf.visual.y, {
       colors: [0x6b3a1f, 0x8a5b3a, 0xf4e4bc], count: wolf.isBoss ? 16 : 8, size: 3, speed: wolf.isBoss ? 170 : 130, life: 420
     });
-    const label = room.isDiamond ? 'diamond ' : room.isMetal ? 'metal ' : '';
-    this.hud.flashToast(`${label}room ${Math.max(0, room.hp)}/${room.maxHp ?? BUILDING.roomHp}`);
-    if (room.hp <= 0) this.destroyRoom(room);
+    const label = this.buildLabel(build);
+    const noun = build.isTurret ? '' : 'room ';
+    this.hud.flashToast(`${label}${noun}${Math.max(0, build.hp)}/${build.maxHp ?? BUILDING.roomHp}`);
+    if (build.hp <= 0) this.destroyBuild(build);
   }
 
-  destroyRoom(room) {
-    const x = room.visual.x;
-    const y = room.visual.y;
-    room.visual.destroy();
-    this.rooms.delete(this.cellKey(room.cell));
+  destroyBuild(build) {
+    const x = build.visual.x;
+    const y = build.visual.y;
+    build.visual.destroy();
+    const key = this.cellKey(build.cell);
+    if (build.isTurret) this.turrets.delete(key);
+    else this.rooms.delete(key);
     this.burstParticles(x, y, {
-      colors: [0x6b3a1f, 0x8a5b3a, 0xf4e4bc, 0x4a2a14],
+      colors: this.buildBurstColors(build),
       count: 30, size: 4, speed: 200, life: 700
     });
     this.cameras.main.shake(140, 0.005);
-    this.hud.flashToast('a room was broken!');
+    const noun = build.isTurret ? `${build.type} turret` : 'a room';
+    this.hud.flashToast(`${noun} was broken!`);
   }
 
   spawnWolf() {
@@ -657,6 +680,7 @@ export class ForestScene extends Phaser.Scene {
         costs: t.cost,
         fireMs: t.fireMs, damage: t.damage, range: t.range,
         bulletColor: t.bulletColor,
+        maxHp: t.hp,
         draw,
         ghostColor: t.ghostColor,
         burstColors: [t.color, t.bulletColor, 0xffffff],
@@ -1174,10 +1198,12 @@ export class ForestScene extends Phaser.Scene {
       this.turrets.set(key, {
         cell, visual,
         type: spec.type,
+        isTurret: true,
         fireMs: spec.fireMs,
         damage: spec.damage,
         range: spec.range,
         bulletColor: spec.bulletColor,
+        hp: spec.maxHp, maxHp: spec.maxHp,
         lastFireAt: 0
       });
       this.burstParticles(x, y, { colors: spec.burstColors, count: 32, size: 4, speed: 150, life: 650 });

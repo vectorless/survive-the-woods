@@ -47,7 +47,7 @@ Crystal-fed defenders placed via build mode (alongside rooms). Each turret occup
 | Good | 3 blue + 2 yellow | 0.75s | 2 |
 | Great | 5 green | 0.25s | 1 |
 
-Wolf HP is 6 (boss 30); spear does 3 damage so spear-killing wolves still takes 2 hits. Turrets are currently invulnerable — wolves can't damage them.
+Wolf HP is 6 (boss 30); spear does 3 damage so spear-killing wolves still takes 2 hits. Turrets are vulnerable — wolves bite them like rooms: weak 10 HP, good 20, great 40. Boss bites deal 4 damage each.
 
 ## Mine
 

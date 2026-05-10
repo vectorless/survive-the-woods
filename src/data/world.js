@@ -5,12 +5,12 @@ export const WORLD = {
   height: 4800,
   tent: { x: 2400, y: 2400, healRadius: 130 },
   campfire: { x: 2620, y: 2480, warmRadius: 160 },
-  bushCount: 9,
-  treeCount: 18,
-  rockCount: 10,
-  stickCount: 16,
-  mushroomCount: 12,
-  pondCount: 4,
+  bushCount: 27,
+  treeCount: 54,
+  rockCount: 30,
+  stickCount: 48,
+  mushroomCount: 36,
+  pondCount: 12,
   // Min distance any spawnable resource keeps from the tent (so the camp isn't
   // crowded) and from each other.
   spawnPadFromTent: 220,
@@ -93,8 +93,8 @@ export const MINE = {
   height: 4400,
   entrance: { x: 2160, y: 2560 }, // position in the forest world (near tent)
   shaftTop: 120,                  // y of the ladder/exit
-  rockCount: 70,
-  crystalPodCount: 22,
+  rockCount: 210,
+  crystalPodCount: 66,
   spawnPad: 96
 };
 
@@ -118,6 +118,7 @@ export const TURRETS = {
     fireMs: 1000,
     damage: 2,           // 3 shots to kill a wolf (6 hp)
     range: 240,
+    hp: 10,              // half a wood room — wolves can chew it down
     color: 0xffd24a,
     bulletColor: 0xfff4a8,
     ghostColor: 0xffd24a
@@ -129,6 +130,7 @@ export const TURRETS = {
     fireMs: 750,
     damage: 3,           // 2 shots to kill
     range: 280,
+    hp: 20,
     color: 0x4aa8ff,
     bulletColor: 0xc4e4ff,
     ghostColor: 0x4aa8ff
@@ -140,6 +142,7 @@ export const TURRETS = {
     fireMs: 250,
     damage: 6,           // 1-shots a wolf, 5 shots for a 30-hp boss
     range: 340,
+    hp: 40,
     color: 0x4ad88a,
     bulletColor: 0xc4f4d8,
     ghostColor: 0x4ad88a
