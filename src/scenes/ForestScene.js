@@ -1,16 +1,17 @@
 import Phaser from 'phaser';
 import {
   WORLD, TIME, RATES, COSTS, FOOD, MUSHROOM, REGROW_MS, BUILDING, WOLF_SCALE,
-  IRON_ROCK_CHANCE, MINE,
+  IRON_ROCK_CHANCE, MINE, TURRETS,
   TREE_HP, INTERACT_RADIUS, SPRINT_MULT,
   WOLF_SPAWN_GAP_SEC, WOLF_NIGHT_INITIAL_DELAY_SEC, WOLF_MAX_ALIVE
 } from '../data/world.js';
-import { WOLF, BOSS } from '../data/animals.js';
+import { WOLF, BOSS, SPEAR_DAMAGE } from '../data/animals.js';
 import {
   drawGround, drawTent, drawTree, drawStump, drawBush, drawRock, drawIronRock,
   drawStick, drawMushroom,
   drawPond, drawCampfire, drawWolf, drawBoss, drawPlayer, makeNightOverlay, makeWarmHalo, mulberry32,
-  drawRoom, drawMetalRoom, drawDiamondRoom, drawGhostRoom, drawMineEntrance
+  drawRoom, drawMetalRoom, drawDiamondRoom, drawGhostRoom, drawMineEntrance,
+  drawWeakTurret, drawGoodTurret, drawGreatTurret
 } from '../world/forestRender.js';
 import { WalkController } from '../controllers/WalkController.js';
 import {
@@ -116,8 +117,9 @@ export class ForestScene extends Phaser.Scene {
 
     // Building mode — F toggles, SPACE places, TAB switches material.
     this.buildingMode = false;
-    this.currentRoomType = 'wood'; // 'wood' | 'metal' | 'diamond'
+    this.currentRoomType = 'wood'; // 'wood' | 'metal' | 'diamond' | 'weak' | 'good' | 'great'
     this.rooms = new Map();
+    this.turrets = new Map();      // cellKey → { cell, visual, spec, lastFireAt }
     this.ghostRoom = drawGhostRoom(this, BUILDING.cellSize);
     this.ghostLabel = this.add.text(0, 0, '', {
       fontFamily: 'monospace', fontSize: '13px', color: '#f4e4bc',
@@ -130,7 +132,7 @@ export class ForestScene extends Phaser.Scene {
     });
     this.input.keyboard.on('keydown-TAB', () => {
       if (!this.buildingMode) return;
-      const cycle = ['wood', 'metal', 'diamond'];
+      const cycle = ['wood', 'metal', 'diamond', 'weak', 'good', 'great'];
       const i = cycle.indexOf(this.currentRoomType);
       this.currentRoomType = cycle[(i + 1) % cycle.length];
       this.hud.flashToast(`build: ${this.currentRoomType}`);
@@ -213,6 +215,7 @@ export class ForestScene extends Phaser.Scene {
     this.tickCampfireEmbers(time);
     this.tickTentHeal(dt);
     this.tickWolves(dt);
+    this.tickTurrets(time);
     this.tickBuildingGhost();
     this.tickSprintDust(time);
     this.refreshTarget();
@@ -448,6 +451,58 @@ export class ForestScene extends Phaser.Scene {
     });
   }
 
+  // --- Turrets ------------------------------------------------------------
+
+  // Each turret picks the closest wolf within range, fires on its cadence.
+  // Hit-scan: damage applied on fire, tracer is cosmetic.
+  tickTurrets(time) {
+    if (this.turrets.size === 0) return;
+    const liveWolves = this.wolves.filter(w => !w.dead);
+    if (liveWolves.length === 0) return;
+    for (const turret of this.turrets.values()) {
+      if (time - turret.lastFireAt < turret.fireMs) continue;
+      const tx = turret.visual.x;
+      const ty = turret.visual.y;
+      let target = null;
+      let bestD = turret.range;
+      for (const w of liveWolves) {
+        const d = Math.hypot(w.visual.x - tx, w.visual.y - ty);
+        if (d <= bestD) { target = w; bestD = d; }
+      }
+      if (target) {
+        this.fireTurret(turret, target, time);
+        turret.lastFireAt = time;
+      }
+    }
+  }
+
+  fireTurret(turret, wolf, time) {
+    const sx = turret.visual.x, sy = turret.visual.y - 6;
+    const tx = wolf.visual.x,   ty = wolf.visual.y;
+    // Tracer line — fades out fast.
+    const tracer = this.add.line(0, 0, sx, sy, tx, ty, turret.bulletColor, 1)
+      .setLineWidth(2).setOrigin(0).setDepth(7);
+    this.tweens.add({
+      targets: tracer, alpha: 0, duration: 110,
+      onComplete: () => tracer.destroy()
+    });
+    // Muzzle flash + impact sparks.
+    this.burstParticles(sx, sy, { colors: [turret.bulletColor, 0xfff4e4], count: 4, size: 3, speed: 60, life: 200 });
+    // Apply damage.
+    wolf.hp -= turret.damage;
+    if (wolf.hp <= 0) {
+      wolf.dead = true;
+      const partCount = wolf.isBoss ? 80 : 40;
+      this.burstParticles(tx, ty, { colors: [0xd13a3a, 0x6a1818, 0x4a4a52, 0x14141a], count: partCount, size: 4, speed: 200, life: 800 });
+      if (wolf.isBoss) {
+        this.cameras.main.shake(160, 0.006);
+        this.hud.flashToast('boss down!');
+      }
+    } else {
+      this.burstParticles(tx, ty, { colors: [0xd13a3a, 0x6a1818, turret.bulletColor], count: 10, size: 3, speed: 140, life: 400 });
+    }
+  }
+
   // --- Wolf scaling per night --------------------------------------------
 
   currentWolfMaxAlive() {
@@ -565,30 +620,86 @@ export class ForestScene extends Phaser.Scene {
 
   // --- Targeting + interact ------------------------------------------------
 
-  // Maps the current build type → material/cost/hp/visual/ghost-color.
+  // Maps the current build type → category, cost(s), HP/draw (rooms) or
+  // fireMs/damage/range/draw (turrets), and shared fields like ghostColor.
+  // Returns a record with `costs: { invKey: count, ... }` regardless of how
+  // many materials are needed, so the placement logic stays uniform.
   roomSpec(type = this.currentRoomType) {
     if (type === 'metal') {
       return {
-        type, matKey: 'iron', matCost: BUILDING.ironPerMetalRoom, maxHp: BUILDING.metalRoomHp,
-        draw: drawMetalRoom, ghostColor: 0x6ad8e8,
+        category: 'room', type,
+        costs: { iron: BUILDING.ironPerMetalRoom },
+        maxHp: BUILDING.metalRoomHp,
+        draw: drawMetalRoom,
+        ghostColor: 0x6ad8e8,
         burstColors: [0x5a6a7a, 0x9aaab8, 0xc4d4e4],
         label: 'metal '
       };
     }
     if (type === 'diamond') {
       return {
-        type, matKey: 'diamond', matCost: BUILDING.diamondPerDiamondRoom, maxHp: BUILDING.diamondRoomHp,
-        draw: drawDiamondRoom, ghostColor: 0xffffff,
+        category: 'room', type,
+        costs: { diamond: BUILDING.diamondPerDiamondRoom },
+        maxHp: BUILDING.diamondRoomHp,
+        draw: drawDiamondRoom,
+        ghostColor: 0xffffff,
         burstColors: [0x9ce6ee, 0xffffff, 0x6ad8e8, 0x4aa8d8],
         label: 'diamond '
       };
     }
+    if (type === 'weak' || type === 'good' || type === 'great') {
+      const t = TURRETS[type];
+      const draw = type === 'weak' ? drawWeakTurret
+        : type === 'good' ? drawGoodTurret
+        : drawGreatTurret;
+      return {
+        category: 'turret', type,
+        costs: t.cost,
+        fireMs: t.fireMs, damage: t.damage, range: t.range,
+        bulletColor: t.bulletColor,
+        draw,
+        ghostColor: t.ghostColor,
+        burstColors: [t.color, t.bulletColor, 0xffffff],
+        label: `${type} turret `,
+        short: t.short
+      };
+    }
     return {
-      type: 'wood', matKey: 'wood', matCost: BUILDING.woodPerRoom, maxHp: BUILDING.roomHp,
-      draw: drawRoom, ghostColor: 0x55ff77,
+      category: 'room', type: 'wood',
+      costs: { wood: BUILDING.woodPerRoom },
+      maxHp: BUILDING.roomHp,
+      draw: drawRoom,
+      ghostColor: 0x55ff77,
       burstColors: [0x6b3a1f, 0x8a5b3a, 0xf4e4bc],
       label: ''
     };
+  }
+
+  // Affordability + payment for arbitrary cost objects.
+  canAffordCosts(costs) {
+    for (const [k, n] of Object.entries(costs)) {
+      if (getItem(this.registry, k) < n) return false;
+    }
+    return true;
+  }
+  payCosts(costs) {
+    for (const [k, n] of Object.entries(costs)) {
+      removeItem(this.registry, k, n);
+    }
+  }
+  formatCosts(costs) {
+    return Object.entries(costs).map(([k, n]) => `${n} ${k}`).join(' + ');
+  }
+  costsWithStock(costs) {
+    return Object.entries(costs)
+      .map(([k, n]) => `${n} ${k} (${getItem(this.registry, k)})`)
+      .join(' + ');
+  }
+
+  // True if a room or turret already occupies this cell.
+  cellOccupied(cell) {
+    const k = this.cellKey(cell);
+    return this.rooms.has(k) || this.turrets.has(k);
   }
 
   refreshTarget() {
@@ -596,15 +707,14 @@ export class ForestScene extends Phaser.Scene {
       this.target = null;
       this.targetRing.setVisible(false);
       const spec = this.roomSpec();
-      const have = getItem(this.registry, spec.matKey);
       const cell = this.cellAtPlayer();
-      const occupied = this.rooms.has(this.cellKey(cell));
+      const occupied = this.cellOccupied(cell);
       const reason = occupied
         ? '— cell taken'
-        : have < spec.matCost
-          ? `— need ${spec.matCost} ${spec.matKey} (have ${have})`
+        : !this.canAffordCosts(spec.costs)
+          ? `— need ${this.formatCosts(spec.costs)}`
           : '';
-      this.hud.setPrompt(`BUILDING [${this.currentRoomType.toUpperCase()}] — SPACE place (${spec.matCost} ${spec.matKey}) · TAB switch · F/ESC exit ${reason}`);
+      this.hud.setPrompt(`BUILDING [${this.currentRoomType.toUpperCase()}] — SPACE place (${this.formatCosts(spec.costs)}) · TAB switch · F/ESC exit ${reason}`);
       return;
     }
     const px = this.player.x, py = this.player.y;
@@ -919,7 +1029,7 @@ export class ForestScene extends Phaser.Scene {
       return;
     }
     adjustStamina(this.registry, -COSTS.spearThrust);
-    w.hp -= 1;
+    w.hp -= SPEAR_DAMAGE;
     // Knock back — bosses are heavier.
     const dx = w.visual.x - this.player.x;
     const dy = w.visual.y - this.player.y;
@@ -1028,19 +1138,18 @@ export class ForestScene extends Phaser.Scene {
     this.ghostRoom.x = x;
     this.ghostRoom.y = y;
     const spec = this.roomSpec();
-    const occupied = this.rooms.has(this.cellKey(cell));
-    const have = getItem(this.registry, spec.matKey);
-    const canAfford = have >= spec.matCost;
+    const occupied = this.cellOccupied(cell);
+    const canAfford = this.canAffordCosts(spec.costs);
     const ok = !occupied && canAfford;
     const color = ok ? spec.ghostColor : 0xff5555;
     this.ghostRoom.setFillStyle(color, 0.25);
     this.ghostRoom.setStrokeStyle(3, color, 0.9);
 
-    // Label above the ghost: material name, cost, and your stock.
-    const name = spec.type.toUpperCase();
+    // Two-line label: type then cost(s) with current stock.
+    const heading = spec.category === 'turret' ? `${spec.short} TURRET` : spec.type.toUpperCase();
     this.ghostLabel.x = x;
     this.ghostLabel.y = y - BUILDING.cellSize / 2 - 6;
-    this.ghostLabel.setText(`${name}  ${spec.matCost} ${spec.matKey} (${have})`);
+    this.ghostLabel.setText(`${heading}\n${this.costsWithStock(spec.costs)}`);
     const hex = '#' + spec.ghostColor.toString(16).padStart(6, '0');
     this.ghostLabel.setColor(ok ? hex : '#ff8a8a');
   }
@@ -1048,16 +1157,34 @@ export class ForestScene extends Phaser.Scene {
   tryPlaceRoom() {
     const cell = this.cellAtPlayer();
     const key = this.cellKey(cell);
-    if (this.rooms.has(key)) {
-      this.hud.flashToast('already a room here');
+    if (this.cellOccupied(cell)) {
+      this.hud.flashToast('cell already occupied');
       return;
     }
     const spec = this.roomSpec();
-    if (!removeItem(this.registry, spec.matKey, spec.matCost)) {
-      this.hud.flashToast(`need ${spec.matCost} ${spec.matKey}`);
+    if (!this.canAffordCosts(spec.costs)) {
+      this.hud.flashToast(`need ${this.formatCosts(spec.costs)}`);
       return;
     }
+    this.payCosts(spec.costs);
     const { x, y } = this.cellCenter(cell);
+
+    if (spec.category === 'turret') {
+      const visual = spec.draw(this, x, y);
+      this.turrets.set(key, {
+        cell, visual,
+        type: spec.type,
+        fireMs: spec.fireMs,
+        damage: spec.damage,
+        range: spec.range,
+        bulletColor: spec.bulletColor,
+        lastFireAt: 0
+      });
+      this.burstParticles(x, y, { colors: spec.burstColors, count: 32, size: 4, speed: 150, life: 650 });
+      this.hud.flashToast(`${spec.label}placed (-${this.formatCosts(spec.costs)})`);
+      return;
+    }
+
     const visual = spec.draw(this, x, y, BUILDING.cellSize);
     this.rooms.set(key, {
       cell, visual,
@@ -1067,7 +1194,7 @@ export class ForestScene extends Phaser.Scene {
       isDiamond: spec.type === 'diamond'
     });
     this.burstParticles(x, y, { colors: spec.burstColors, count: 32, size: 4, speed: 150, life: 650 });
-    this.hud.flashToast(`${spec.label}room built (-${spec.matCost} ${spec.matKey})`);
+    this.hud.flashToast(`${spec.label}room built (-${this.formatCosts(spec.costs)})`);
   }
 
   // --- Time skip ----------------------------------------------------------

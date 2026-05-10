@@ -449,6 +449,67 @@ export function makeWarmHalo(scene, x, y, r) {
   return halo;
 }
 
+// --- Turrets --------------------------------------------------------------
+
+// Shared base — small dark stone pad with corner bolts. Turrets sit on top.
+function turretBase(scene, baseColor) {
+  const c = scene.add.container(0, 0);
+  const shadow = scene.add.ellipse(0, 16, 50, 12, 0x000000, 0.45);
+  const pad = scene.add.rectangle(0, 8, 44, 18, baseColor).setStrokeStyle(2, 0x14110d);
+  const b1 = scene.add.circle(-18, 4, 1.6, 0x14110d);
+  const b2 = scene.add.circle( 18, 4, 1.6, 0x14110d);
+  const b3 = scene.add.circle(-18, 14, 1.6, 0x14110d);
+  const b4 = scene.add.circle( 18, 14, 1.6, 0x14110d);
+  c.add([shadow, pad, b1, b2, b3, b4]);
+  return c;
+}
+
+export function drawWeakTurret(scene, cx, cy) {
+  const c = scene.add.container(cx, cy);
+  const base = turretBase(scene, 0x6e6e74);
+  // Yellow crystal nub + grey iron barrel
+  const body = scene.add.circle(0, -2, 10, 0xffd24a).setStrokeStyle(2, 0x6a4a2a);
+  const shine = scene.add.circle(-3, -5, 3, 0xfff4e4);
+  const barrel = scene.add.rectangle(0, -10, 6, 14, 0x4a4a52).setStrokeStyle(1, 0x14110d);
+  c.add([base, body, shine, barrel]);
+  c.setDepth(2);
+  return c;
+}
+
+export function drawGoodTurret(scene, cx, cy) {
+  const c = scene.add.container(cx, cy);
+  const base = turretBase(scene, 0x5a6a7a);
+  const body = scene.add.rectangle(0, -4, 22, 18, 0x4aa8ff).setStrokeStyle(2, 0x1a4a8a);
+  const trim = scene.add.rectangle(0, -4, 22, 4, 0xc4e4ff);
+  const barrel1 = scene.add.rectangle(-4, -16, 4, 14, 0x4a4a52).setStrokeStyle(1, 0x14110d);
+  const barrel2 = scene.add.rectangle( 4, -16, 4, 14, 0x4a4a52).setStrokeStyle(1, 0x14110d);
+  c.add([base, body, trim, barrel1, barrel2]);
+  c.setDepth(2);
+  return c;
+}
+
+export function drawGreatTurret(scene, cx, cy) {
+  const c = scene.add.container(cx, cy);
+  const base = turretBase(scene, 0x2a4a32);
+  // Pulsing aura
+  const aura = scene.add.circle(0, -4, 22, 0x4ad88a, 0.25);
+  aura.setBlendMode(Phaser.BlendModes.ADD);
+  // Large green crystal
+  const gem = scene.add.polygon(0, -6, [0, -16, 12, -2, 8, 14, -8, 14, -12, -2], 0x4ad88a)
+    .setStrokeStyle(2, 0x1a3a22);
+  const facet = scene.add.polygon(-2, -8, [0, -8, 6, -2, 0, 6, -6, -2], 0xc4f4d8);
+  const tip = scene.add.circle(0, -16, 2, 0xffffff);
+  c.add([base, aura, gem, facet, tip]);
+  c.setDepth(2);
+  scene.tweens.add({
+    targets: aura,
+    alpha: { from: 0.18, to: 0.45 },
+    scale: { from: 0.9, to: 1.15 },
+    duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
+  });
+  return c;
+}
+
 // --- Mine entrance (in the forest) ---------------------------------------
 
 // A wooden frame around a black hole, with a sign reading MINE.

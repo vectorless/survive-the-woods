@@ -27,8 +27,8 @@ Top-down forest survival. Pick berries → eat → craft tools → survive night
 | `Q` | Eat (trail mix first, then berry) |
 | `Z` | Open inventory |
 | `F` | Toggle building mode (ghost room snaps to a 80px grid at your feet) |
-| `TAB` | (in building mode) Cycle material: wood → metal → diamond |
-| `SPACE` | (in building mode) Place a room — 6 wood / 4 iron / 2 diamond depending on material (HP 20 / 40 / 80) |
+| `TAB` | (in building mode) Cycle: wood → metal → diamond → weak → good → great |
+| `SPACE` | (in building mode) Place a room or turret — costs vary by type |
 | `1` | Hotbar slot — toggle axe |
 | `2` | Hotbar slot — toggle spear |
 | `3` | Hotbar slot — eat berry |
@@ -36,6 +36,18 @@ Top-down forest survival. Pick berries → eat → craft tools → survive night
 | `5` | Hotbar slot — eat mushroom (20% poison, 80% fully fills hunger) |
 | `6` | Hotbar slot — eat fish |
 | `ESC` | Close workbench / inventory |
+
+## Turrets
+
+Crystal-fed defenders placed via build mode (alongside rooms). Each turret occupies a cell and shoots the nearest wolf inside its range on a fixed cadence — hit-scan, the projectile is just a tracer.
+
+| Tier | Cost | Fire | Wolf shots |
+| --- | --- | --- | --- |
+| Weak | 4 yellow + 1 blue | 1.0s | 3 |
+| Good | 3 blue + 2 yellow | 0.75s | 2 |
+| Great | 5 green | 0.25s | 1 |
+
+Wolf HP is 6 (boss 30); spear does 3 damage so spear-killing wolves still takes 2 hits. Turrets are currently invulnerable — wolves can't damage them.
 
 ## Mine
 

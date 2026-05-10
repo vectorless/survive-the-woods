@@ -106,6 +106,46 @@ export const CRYSTAL_ROLL = [
   { key: 'greenCrystal',  name: 'green',  color: 0x4ad88a, chance: 0.2 }
 ];
 
+// Crystal-fed turrets. Placed in build mode (F + TAB). Each occupies one cell
+// (no overlap with rooms or other turrets) and shoots the nearest wolf in
+// range on a fixed cadence. Hit-scan — projectile is just a tracer.
+// Damage is calibrated so wolves (6 hp) die in the listed number of shots.
+export const TURRETS = {
+  weak: {
+    name: 'Weak Turret',
+    short: 'WEAK',
+    cost: { yellowCrystal: 4, blueCrystal: 1 },
+    fireMs: 1000,
+    damage: 2,           // 3 shots to kill a wolf (6 hp)
+    range: 240,
+    color: 0xffd24a,
+    bulletColor: 0xfff4a8,
+    ghostColor: 0xffd24a
+  },
+  good: {
+    name: 'Good Turret',
+    short: 'GOOD',
+    cost: { blueCrystal: 3, yellowCrystal: 2 },
+    fireMs: 750,
+    damage: 3,           // 2 shots to kill
+    range: 280,
+    color: 0x4aa8ff,
+    bulletColor: 0xc4e4ff,
+    ghostColor: 0x4aa8ff
+  },
+  great: {
+    name: 'Great Turret',
+    short: 'GREAT',
+    cost: { greenCrystal: 5 },
+    fireMs: 250,
+    damage: 6,           // 1-shots a wolf, 5 shots for a 30-hp boss
+    range: 340,
+    color: 0x4ad88a,
+    bulletColor: 0xc4f4d8,
+    ghostColor: 0x4ad88a
+  }
+};
+
 // 45% of rocks spawn as iron — same shape, bluish tint. Iron ore drops 1 iron
 // instead of 1 stone when mined.
 export const IRON_ROCK_CHANCE = 0.45;
