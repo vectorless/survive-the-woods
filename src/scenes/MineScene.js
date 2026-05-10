@@ -43,6 +43,19 @@ export class MineScene extends Phaser.Scene {
     this.controller = new WalkController(this, this.player);
     cam.startFollow(this.player, true, 0.15, 0.15);
 
+    // Torchlight vignette — a near-opaque rectangle covering the mine, with a
+    // circular hole around the player carved out by an inverted geometry mask.
+    this.darkOverlay = this.add.rectangle(
+      MINE.width / 2, MINE.height / 2,
+      MINE.width, MINE.height,
+      0x000000, 0.96
+    ).setDepth(60);
+    this.torchShape = this.add.circle(this.player.x, this.player.y, MINE.visionRadius, 0xffffff)
+      .setVisible(false);
+    const torchMask = this.torchShape.createGeometryMask();
+    torchMask.invertAlpha = true;
+    this.darkOverlay.setMask(torchMask);
+
     this.keys = this.input.keyboard.addKeys({ sprint: 'SHIFT' });
     this.input.keyboard.on('keydown-E', () => this.handleInteract());
     this.input.keyboard.on('keydown-ESC', () => this.exitMine());
@@ -89,6 +102,9 @@ export class MineScene extends Phaser.Scene {
     const dt = deltaMs / 1000;
     if (this._sprinting) adjustStamina(this.registry, -30 * dt);
     else adjustStamina(this.registry, 22 * dt);
+    // Torch follows the player.
+    this.torchShape.x = this.player.x;
+    this.torchShape.y = this.player.y;
     this.refreshTarget();
   }
 

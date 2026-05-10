@@ -94,8 +94,11 @@ export const MINE = {
   entrance: { x: 2160, y: 2560 }, // position in the forest world (near tent)
   shaftTop: 120,                  // y of the ladder/exit
   rockCount: 420,
-  crystalPodCount: 66,
-  spawnPad: 96
+  crystalPodCount: 18,
+  spawnPad: 96,
+  // Radius of clear visibility around the player; everything outside the
+  // circle is hidden by a dark overlay.
+  visionRadius: 180
 };
 
 // Roll order for crystal pods. Probabilities sum to 1; the loop in
