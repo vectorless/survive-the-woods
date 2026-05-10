@@ -4,6 +4,7 @@ import { HUDScene } from './scenes/HUDScene.js';
 import { CraftScene } from './scenes/CraftScene.js';
 import { InventoryScene } from './scenes/InventoryScene.js';
 import { GameOverScene } from './scenes/GameOverScene.js';
+import { MineScene } from './scenes/MineScene.js';
 import { initState } from './state.js';
 
 const game = new Phaser.Game({
@@ -15,7 +16,7 @@ const game = new Phaser.Game({
     width: '100%',
     height: '100%'
   },
-  scene: [ForestScene, HUDScene, CraftScene, InventoryScene, GameOverScene]
+  scene: [ForestScene, HUDScene, CraftScene, InventoryScene, MineScene, GameOverScene]
 });
 
 initState(game.registry);

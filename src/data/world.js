@@ -86,6 +86,26 @@ export const BUILDING = {
 // Crafted at the workbench from iron — used to build diamond rooms.
 export const DIAMOND_PER_CRAFT = 3;
 
+// Mine — separate scrolling scene reached via a built entrance near the tent.
+// Layout is a tall vertical shaft; player walks down to find rocks + crystal pods.
+export const MINE = {
+  width: 1100,
+  height: 4400,
+  entrance: { x: 1080, y: 1280 }, // position in the forest world (near tent)
+  shaftTop: 120,                  // y of the ladder/exit
+  rockCount: 70,
+  crystalPodCount: 22,
+  spawnPad: 96
+};
+
+// Roll order for crystal pods. Probabilities sum to 1; the loop in
+// MineScene picks the first whose cumulative ceiling beats Math.random().
+export const CRYSTAL_ROLL = [
+  { key: 'yellowCrystal', name: 'yellow', color: 0xffe14a, chance: 0.5 },
+  { key: 'blueCrystal',   name: 'blue',   color: 0x4aa8ff, chance: 0.3 },
+  { key: 'greenCrystal',  name: 'green',  color: 0x4ad88a, chance: 0.2 }
+];
+
 // 45% of rocks spawn as iron — same shape, bluish tint. Iron ore drops 1 iron
 // instead of 1 stone when mined.
 export const IRON_ROCK_CHANCE = 0.45;

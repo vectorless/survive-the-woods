@@ -37,9 +37,13 @@ Top-down forest survival. Pick berries → eat → craft tools → survive night
 | `6` | Hotbar slot — eat fish |
 | `ESC` | Close workbench / inventory |
 
+## Mine
+
+After crafting "Build Mine" at the workbench (5 wood + 10 stone), an entrance appears next to the tent. Press `E` on it to enter `MineScene` — a tall vertical shaft. ForestScene is paused while you're underground (no hunger/wolf ticks). Inside: regular grey rocks (mine for stone) and **crystal pods**. Cracking a pod rolls 50% yellow / 30% blue / 20% green crystal. The mine layout is seeded once per run via `mineSeed`. Climb the ladder at the top (or press `ESC`) to surface.
+
 ## Architecture invariants — keep these
 
-- **Phaser scenes are modes.** `ForestScene` is the hub; `CraftScene` launches as a paused overlay; `HUDScene` is launched once and persists; `GameOverScene` swaps in on death.
+- **Phaser scenes are modes.** `ForestScene` is the hub; `CraftScene`/`MineScene`/`InventoryScene` launch as paused overlays; `HUDScene` is launched once and persists; `GameOverScene` swaps in on death.
 - **Game state lives on `scene.registry`** — `hunger`, `health`, `stamina`, `inventory`, `ownedTools`, `equipped`, `campfireBuilt`, `campfireLit`, `daysSurvived`, `timeOfDay`, `isNight`, `worldSeed`, `sprintMult`, `gameOver`. Mutators in `src/state.js`. Never `registry.set` from a scene unless updating one of the live signals (`sprintMult`, `timeOfDay`, `isNight`, `campfireLit`).
 - **Content is data, not classes.** `src/data/{world,recipes,animals}.js` are tweak-here knobs. Add a recipe by editing `recipes.js`; rebalance hunger by editing `world.js`.
 - **WalkController is decoupled from sprint key.** It reads `registry.sprintMult` each tick; `ForestScene` decides whether sprint is allowed (Shift held + moving + stamina > 0).

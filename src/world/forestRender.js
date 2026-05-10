@@ -449,6 +449,147 @@ export function makeWarmHalo(scene, x, y, r) {
   return halo;
 }
 
+// --- Mine entrance (in the forest) ---------------------------------------
+
+// A wooden frame around a black hole, with a sign reading MINE.
+export function drawMineEntrance(scene, x, y) {
+  const c = scene.add.container(x, y);
+  const shadow = scene.add.ellipse(0, 22, 80, 16, 0x000000, 0.45);
+  // Pit
+  const pit = scene.add.ellipse(0, 6, 64, 28, 0x0a0805).setStrokeStyle(2, 0x2f1d0d);
+  // Wooden frame
+  const frameColor = 0x6b3a1f;
+  const frameStroke = 0x2f1d0d;
+  const left = scene.add.rectangle(-32, -16, 8, 44, frameColor).setStrokeStyle(1, frameStroke);
+  const right = scene.add.rectangle(32, -16, 8, 44, frameColor).setStrokeStyle(1, frameStroke);
+  const top = scene.add.rectangle(0, -36, 80, 8, frameColor).setStrokeStyle(1, frameStroke);
+  // Headlamp glint inside the pit
+  const glint = scene.add.circle(0, 8, 6, 0xffd24a, 0.55);
+  // Sign
+  const sign = scene.add.rectangle(0, -50, 44, 16, 0xc4a47a).setStrokeStyle(1, 0x4a2a14);
+  c.add([shadow, pit, left, right, top, glint, sign]);
+  const label = scene.add.text(0, -50, 'MINE', {
+    fontFamily: 'serif', fontSize: '12px', color: '#3b2a14'
+  }).setOrigin(0.5);
+  c.add(label);
+  c.setDepth(3);
+  return c;
+}
+
+// --- Mine interior --------------------------------------------------------
+
+// Dark stone floor with cracks and pebbles, sized to the mine bounds.
+export function drawMineGround(scene, width, height, seed) {
+  const g = scene.add.graphics();
+  g.fillStyle(0x1a1108, 1).fillRect(0, 0, width, height);
+  const rng = mulberry32(seed ^ 0xdeadbeef);
+  // Larger dark patches for variety
+  for (let i = 0; i < 120; i++) {
+    const x = rng() * width;
+    const y = rng() * height;
+    const r = 30 + rng() * 80;
+    g.fillStyle(0x2a1d10, 0.55);
+    g.fillCircle(x, y, r);
+  }
+  // Pebbles
+  for (let i = 0; i < 800; i++) {
+    const x = rng() * width;
+    const y = rng() * height;
+    g.fillStyle(0x4a3424, 0.7);
+    g.fillRect(x, y, 2, 2);
+  }
+  // Cracks — short dark lines
+  g.lineStyle(1, 0x0a0805, 0.6);
+  for (let i = 0; i < 80; i++) {
+    const x = rng() * width;
+    const y = rng() * height;
+    const len = 12 + rng() * 28;
+    const ang = rng() * Math.PI * 2;
+    g.beginPath();
+    g.moveTo(x, y);
+    g.lineTo(x + Math.cos(ang) * len, y + Math.sin(ang) * len);
+    g.strokePath();
+  }
+  g.setDepth(0);
+  return g;
+}
+
+// Darker rock — same shape as a forest rock but cooler grey + lit highlight.
+export function drawMineRock(scene, x, y) {
+  const c = scene.add.container(x, y);
+  const shadow = scene.add.ellipse(0, 6, 36, 8, 0x000000, 0.5);
+  const body = scene.add.polygon(0, -10,
+    [-18, 12, -10, -6, 6, -10, 18, 0, 12, 12, -6, 14], 0x4a4250);
+  body.setStrokeStyle(1, 0x14101a);
+  const hl = scene.add.polygon(0, -12, [-6, -2, 4, -6, 6, 0, -2, 2], 0x7a6e84);
+  c.add([shadow, body, hl]);
+  c.setDepth(2);
+  return c;
+}
+
+// Crystal pod — dark rocky shell cracked open with a glowing core.
+// The core color is just a teaser — actual roll happens when the pod is broken.
+export function drawCrystalPod(scene, x, y) {
+  const c = scene.add.container(x, y);
+  const shadow = scene.add.ellipse(0, 8, 42, 10, 0x000000, 0.55);
+  // Outer rocky shell
+  const shell = scene.add.polygon(0, -8,
+    [-22, 16, -16, 0, -8, -14, 6, -16, 18, -8, 22, 6, 16, 18, 0, 22], 0x2a1d10);
+  shell.setStrokeStyle(2, 0x0a0805);
+  // Inner crystal cluster — three stacked diamonds
+  const core1 = scene.add.polygon(-4, -6, [0, -8, 5, 0, 0, 8, -5, 0], 0xffd24a)
+    .setStrokeStyle(1, 0xfff4e4);
+  const core2 = scene.add.polygon(6, -2, [0, -7, 4, 0, 0, 7, -4, 0], 0xc4a4ff)
+    .setStrokeStyle(1, 0xfff4e4);
+  const core3 = scene.add.polygon(0, 6, [0, -6, 4, 0, 0, 6, -4, 0], 0x9ce6ee)
+    .setStrokeStyle(1, 0xfff4e4);
+  // Soft glow halo
+  const glow = scene.add.circle(0, -2, 22, 0xffe14a, 0.18);
+  glow.setBlendMode(Phaser.BlendModes.ADD);
+  c.add([shadow, shell, glow, core1, core2, core3]);
+  c.setDepth(3);
+  // Gentle pulse
+  scene.tweens.add({
+    targets: glow,
+    alpha: { from: 0.12, to: 0.32 },
+    scale: { from: 0.9, to: 1.15 },
+    duration: 1400,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.easeInOut'
+  });
+  return c;
+}
+
+// Ladder back to the surface — drawn at the top of the mine.
+export function drawMineExit(scene, x, y) {
+  const c = scene.add.container(x, y);
+  const halo = scene.add.circle(0, 0, 36, 0xffd24a, 0.18);
+  halo.setBlendMode(Phaser.BlendModes.ADD);
+  // Two side rails + rungs
+  const rail1 = scene.add.rectangle(-10, 0, 4, 64, 0x8a5b3a).setStrokeStyle(1, 0x2f1d0d);
+  const rail2 = scene.add.rectangle(10, 0, 4, 64, 0x8a5b3a).setStrokeStyle(1, 0x2f1d0d);
+  const rungs = [];
+  for (let i = -2; i <= 2; i++) {
+    rungs.push(
+      scene.add.rectangle(0, i * 12, 28, 4, 0xc4a47a).setStrokeStyle(1, 0x4a2a14)
+    );
+  }
+  // Up-arrow on top
+  const arrow = scene.add.triangle(0, -42, 0, -8, -8, 4, 8, 4, 0xffd24a).setStrokeStyle(1, 0x6a4a2a);
+  c.add([halo, rail1, rail2, ...rungs, arrow]);
+  c.setDepth(4);
+  scene.tweens.add({
+    targets: arrow,
+    y: -50,
+    duration: 700,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.easeInOut'
+  });
+  return c;
+}
+
 // --- RNG ------------------------------------------------------------------
 
 export function mulberry32(seed) {

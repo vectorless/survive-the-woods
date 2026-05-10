@@ -11,12 +11,18 @@ export function initState(registry) {
   registry.set('health', MAX_BAR);
   registry.set('stamina', MAX_BAR);
 
-  registry.set('inventory', { wood: 0, stone: 0, iron: 0, diamond: 0, berries: 0, trailMix: 0, mushroom: 0, fish: 0 });
+  registry.set('inventory', {
+    wood: 0, stone: 0, iron: 0, diamond: 0,
+    berries: 0, trailMix: 0, mushroom: 0, fish: 0,
+    yellowCrystal: 0, blueCrystal: 0, greenCrystal: 0
+  });
   registry.set('ownedTools', []);   // 'axe' / 'spear'
   registry.set('equipped', null);   // 'axe' | 'spear' | null
 
   registry.set('campfireBuilt', false);
   registry.set('campfireLit', false);     // true between dusk-feed and next dawn
+  registry.set('mineBuilt', false);
+  registry.set('mineSeed', 0);            // 0 = "not yet seeded"; set on first entry
 
   registry.set('daysSurvived', 0);
   registry.set('timeOfDay', 0);            // 0..1 fraction of dayLengthSec

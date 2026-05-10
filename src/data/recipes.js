@@ -38,7 +38,14 @@ export const RECIPES = {
     desc: 'Forge 3 iron into 1 diamond. Used to build the toughest rooms.',
     item: { key: 'diamond', amount: 1 },
     cost: { iron: 3 }
+  },
+  mine: {
+    id: 'mine',
+    name: 'Build Mine',
+    desc: 'One-time. Sinks a shaft near the tent. Find rocks and crystal pods inside.',
+    flag: 'mineBuilt',
+    cost: { wood: 5, stone: 10 }
   }
 };
 
-export const RECIPES_ORDER = ['axe', 'spear', 'campfire', 'trailMix', 'diamond'];
+export const RECIPES_ORDER = ['axe', 'spear', 'campfire', 'trailMix', 'diamond', 'mine'];

@@ -12,7 +12,7 @@ export class CraftScene extends Phaser.Scene {
     this.add.rectangle(0, 0, width, height, 0x000000, 0.6).setOrigin(0).setScrollFactor(0);
 
     const panelW = 480;
-    const panelH = 520;
+    const panelH = 600;
     const panelX = (width - panelW) / 2;
     const panelY = (height - panelH) / 2;
     const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x1f2418, 0.95).setStrokeStyle(2, 0xc4734a);

@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import {
   WORLD, TIME, RATES, COSTS, FOOD, MUSHROOM, REGROW_MS, BUILDING, WOLF_SCALE,
-  IRON_ROCK_CHANCE,
+  IRON_ROCK_CHANCE, MINE,
   TREE_HP, INTERACT_RADIUS, SPRINT_MULT,
   WOLF_SPAWN_GAP_SEC, WOLF_NIGHT_INITIAL_DELAY_SEC, WOLF_MAX_ALIVE
 } from '../data/world.js';
@@ -10,7 +10,7 @@ import {
   drawGround, drawTent, drawTree, drawStump, drawBush, drawRock, drawIronRock,
   drawStick, drawMushroom,
   drawPond, drawCampfire, drawWolf, drawBoss, drawPlayer, makeNightOverlay, makeWarmHalo, mulberry32,
-  drawRoom, drawMetalRoom, drawDiamondRoom, drawGhostRoom
+  drawRoom, drawMetalRoom, drawDiamondRoom, drawGhostRoom, drawMineEntrance
 } from '../world/forestRender.js';
 import { WalkController } from '../controllers/WalkController.js';
 import {
@@ -139,10 +139,23 @@ export class ForestScene extends Phaser.Scene {
       if (this.buildingMode) this.toggleBuildingMode();
     });
 
-    // Resume cleanly if we were paused by CraftScene
+    // Mine entrance — drawn lazily once the player has built one.
+    this.mineEntrance = null;
+    this.ensureMineEntrance();
+
+    // Resume cleanly if we were paused by CraftScene or MineScene
     this.events.on('resume', () => {
-      // nothing special — input handlers are intact
+      // Mine may have just been crafted — show its entrance now.
+      this.ensureMineEntrance();
     });
+  }
+
+  // No-op if the visual already exists or the flag isn't set; otherwise
+  // draws the entrance at MINE.entrance.
+  ensureMineEntrance() {
+    if (this.mineEntrance) return;
+    if (!this.registry.get('mineBuilt')) return;
+    this.mineEntrance = drawMineEntrance(this, MINE.entrance.x, MINE.entrance.y);
   }
 
   // --- World spawn helpers -------------------------------------------------
@@ -613,6 +626,15 @@ export class ForestScene extends Phaser.Scene {
       }
     }
 
+    // Mine entrance — only if built
+    if (this.registry.get('mineBuilt')) {
+      const d = Math.hypot(px - MINE.entrance.x, py - MINE.entrance.y);
+      if (d <= INTERACT_RADIUS && d < bestDist) {
+        best = { kind: 'mineEntrance', x: MINE.entrance.x, y: MINE.entrance.y - 50 };
+        bestDist = d;
+      }
+    }
+
     // wolves — top priority within INTERACT_RADIUS if spear equipped
     const equipped = this.registry.get('equipped');
     if (equipped === 'spear') {
@@ -656,6 +678,7 @@ export class ForestScene extends Phaser.Scene {
     if (!target) return 'WASD move · Shift sprint · Q eat · Z inventory';
     switch (target.kind) {
       case 'tent': return 'E open workbench · resting heals';
+      case 'mineEntrance': return 'E descend into the mine';
       case 'campfire': {
         const built = this.registry.get('campfireBuilt');
         const lit = this.registry.get('campfireLit');
@@ -682,6 +705,10 @@ export class ForestScene extends Phaser.Scene {
       case 'tent':
         this.scene.pause();
         this.scene.launch('CraftScene');
+        return;
+      case 'mineEntrance':
+        this.scene.pause();
+        this.scene.launch('MineScene');
         return;
       case 'campfire':
         this.feedCampfire();
