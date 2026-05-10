@@ -227,7 +227,8 @@ export class ForestScene extends Phaser.Scene {
   tickSprintFlag() {
     const sprintHeld = this.keys.sprint.isDown;
     const moving = this.controller.moving;
-    const canSprint = sprintHeld && moving && (this.registry.get('stamina') || 0) > 0;
+    // Sprint never blocks on empty stamina — the bar just clamps at 0.
+    const canSprint = sprintHeld && moving;
     this.registry.set('sprintMult', canSprint ? SPRINT_MULT : 1);
     this._sprinting = canSprint;
   }

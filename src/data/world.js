@@ -1,10 +1,10 @@
 // World layout, timing constants, drain rates. Tweak here, not in scenes.
 
 export const WORLD = {
-  width: 2400,
-  height: 2400,
-  tent: { x: 1200, y: 1200, healRadius: 130 },
-  campfire: { x: 1310, y: 1240, warmRadius: 160 },
+  width: 4800,
+  height: 4800,
+  tent: { x: 2400, y: 2400, healRadius: 130 },
+  campfire: { x: 2620, y: 2480, warmRadius: 160 },
   bushCount: 9,
   treeCount: 18,
   rockCount: 10,
@@ -91,7 +91,7 @@ export const DIAMOND_PER_CRAFT = 3;
 export const MINE = {
   width: 1100,
   height: 4400,
-  entrance: { x: 1080, y: 1280 }, // position in the forest world (near tent)
+  entrance: { x: 2160, y: 2560 }, // position in the forest world (near tent)
   shaftTop: 120,                  // y of the ladder/exit
   rockCount: 70,
   crystalPodCount: 22,
