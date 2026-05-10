@@ -60,13 +60,15 @@ export class MineScene extends Phaser.Scene {
   }
 
   // Scatter resources between just-below-the-ladder and the bottom.
+  // Rocks use a tighter pad than crystal pods so 2100 of them can fit.
   spawnInMine(rng, count, kind, drawFn) {
     const list = [];
     const margin = 60;
     const minY = MINE.shaftTop + 200;
-    const pad = MINE.spawnPad;
+    const pad = kind === 'mineRock' ? MINE.rockSpawnPad : MINE.spawnPad;
+    const attemptCap = count * 80;
     let attempts = 0;
-    while (list.length < count && attempts < count * 60) {
+    while (list.length < count && attempts < attemptCap) {
       attempts++;
       const x = margin + rng() * (MINE.width - margin * 2);
       const y = minY + rng() * (MINE.height - minY - margin);
