@@ -13,7 +13,7 @@ Top-down forest survival. Pick berries → eat → craft tools → survive night
 
 ## Bars
 
-- **Hunger** — drains over one day. Press `Q` to eat berries (+18) or trail-mix (+55). At 0 it eats your health.
+- **Hunger** — empties in ~5 minutes. Press `Q` to eat berries (+18) or trail-mix (+55). At 0 it eats your health.
 - **Health** — regens inside the tent radius. Drains from cold (night, no fire), wolf bites, or starvation. 0 → game over.
 - **Stamina** — drains on sprint, chop, mine, spear. Regens when idle. Below an action's cost → action refuses.
 

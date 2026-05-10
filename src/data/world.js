@@ -20,13 +20,13 @@ export const WORLD = {
 // One full day cycle (real-time seconds). Day = bright; night = dark + cold + wolves.
 export const TIME = {
   dayLengthSec: 180,        // total cycle
-  daylightFraction: 0.66,   // first 66% is day, rest is night
+  daylightFraction: 0.60,   // first 60% is day, rest is night (was 0.66)
   duskFraction: 0.04        // sunset transition window inside daylight portion
 };
 
 // Bar drain/regen rates (per second).
 export const RATES = {
-  hungerDrain: 100 / 420,        // empties in ~7 minutes (~2 full day cycles)
+  hungerDrain: 100 / 300,        // empties in ~5 minutes (was ~7)
   staminaRegen: 22,              // when idle (not sprinting / not just acted)
   staminaSprintDrain: 30,        // while sprinting and moving
   tentHeal: 5                    // hp/sec inside healRadius
@@ -165,10 +165,11 @@ export const WOLF_SCALE = {
   spawnGapFloor: 1,
   speedBonus: 14,         // +14 px/sec per night
   speedCap: 220,
-  // Boss unlock — starting on this night, after this many wolves have spawned,
-  // (nightNumber − unlockNight + 1) bosses are spawned that night.
+  // Boss unlock — starting on this night, (nightNumber − unlockNight + 1)
+  // bosses spawn (one extra per night past 8). Was gated behind spawning 64
+  // wolves first, but the night never lasted long enough for that to fire.
   bossUnlockNight: 8,
-  bossUnlockSpawns: 64
+  bossUnlockSpawns: 0
 };
 
 // Sprint multiplier (passed via registry to WalkController).
@@ -176,5 +177,5 @@ export const SPRINT_MULT = 1.6;
 
 // Wolf spawn pacing.
 export const WOLF_SPAWN_GAP_SEC = 18;  // a wolf appears at most this often
-export const WOLF_NIGHT_INITIAL_DELAY_SEC = 4;
+export const WOLF_NIGHT_INITIAL_DELAY_SEC = 2;  // wolves arrive sooner now
 export const WOLF_MAX_ALIVE = 1;  // night-1 baseline; doubles per night via WOLF_SCALE

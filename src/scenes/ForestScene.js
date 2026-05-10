@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import {
   WORLD, TIME, RATES, COSTS, FOOD, MUSHROOM, REGROW_MS, BUILDING, WOLF_SCALE,
   IRON_ROCK_CHANCE, MINE, TURRETS,
-  TREE_HP, INTERACT_RADIUS, SPRINT_MULT,
+  TREE_HP, INTERACT_RADIUS, SPRINT_MULT, PLAYER_RADIUS,
   WOLF_SPAWN_GAP_SEC, WOLF_NIGHT_INITIAL_DELAY_SEC, WOLF_MAX_ALIVE
 } from '../data/world.js';
 import { WOLF, BOSS, SPEAR_DAMAGE } from '../data/animals.js';
@@ -120,6 +120,7 @@ export class ForestScene extends Phaser.Scene {
     this.currentRoomType = 'wood'; // 'wood' | 'metal' | 'diamond' | 'weak' | 'good' | 'great'
     this.rooms = new Map();
     this.turrets = new Map();      // cellKey → { cell, visual, spec, lastFireAt }
+    this.placedExitKey = null;     // cell the player can still exit after placing on it
     this.ghostRoom = drawGhostRoom(this, BUILDING.cellSize);
     this.ghostLabel = this.add.text(0, 0, '', {
       fontFamily: 'monospace', fontSize: '13px', color: '#f4e4bc',
@@ -205,7 +206,10 @@ export class ForestScene extends Phaser.Scene {
     const dt = deltaMs / 1000;
 
     this.tickSprintFlag();
+    const prevX = this.player.x;
+    const prevY = this.player.y;
     this.controller.update(deltaMs);
+    this.tickPlayerBuildCollision(prevX, prevY);
     this.tickPondCollision();
     this.tickStamina(dt);
     this.tickHunger(dt);
@@ -264,6 +268,24 @@ export class ForestScene extends Phaser.Scene {
         this.burstParticles(this.player.x, this.player.y, { colors: [0x4aa8d8, 0xc4e4f8], count: 12, size: 3, speed: 80, life: 420, drift: -10 });
       }
       p._wasBumping = true;
+    }
+  }
+
+  // Axis-separated build collision for the player. Mirrors the wolf logic
+  // but uses PLAYER_RADIUS and respects placedExitKey so the player can step
+  // out of a cell they just placed on.
+  tickPlayerBuildCollision(prevX, prevY) {
+    const opts = { radius: PLAYER_RADIUS, skipKey: this.placedExitKey };
+    if (this.posBlockedByBuild(this.player.x, prevY, opts)) {
+      this.player.x = prevX;
+    }
+    if (this.posBlockedByBuild(this.player.x, this.player.y, opts)) {
+      this.player.y = prevY;
+    }
+    // Once the player has actually left the just-placed cell, lock it.
+    if (this.placedExitKey) {
+      const cur = this.cellKey(this.cellAtPlayer());
+      if (cur !== this.placedExitKey) this.placedExitKey = null;
     }
   }
 
@@ -538,16 +560,19 @@ export class ForestScene extends Phaser.Scene {
     return [...this.rooms.values(), ...this.turrets.values()];
   }
 
-  // True if the (expanded) AABB of any placed build contains (x, y).
-  // Padded by wolf radius so the wolf snout can't poke into the floor.
-  posBlockedByBuild(x, y) {
+  // True if the (expanded) AABB of any placed build contains (x, y). Pads by
+  // `radius` so the body can't poke into the wall. `skipKey` lets the caller
+  // exempt one cell (used so the player can step out of a freshly-placed cell).
+  posBlockedByBuild(x, y, opts = {}) {
     const s = BUILDING.cellSize;
-    const r = WOLF.radius + 2;
+    const radius = opts.radius ?? (WOLF.radius + 2);
+    const skipKey = opts.skipKey || null;
     for (const b of this.allBuilds()) {
-      const minX = b.cell.gx * s - r;
-      const minY = b.cell.gy * s - r;
-      const maxX = (b.cell.gx + 1) * s + r;
-      const maxY = (b.cell.gy + 1) * s + r;
+      if (skipKey && this.cellKey(b.cell) === skipKey) continue;
+      const minX = b.cell.gx * s - radius;
+      const minY = b.cell.gy * s - radius;
+      const maxX = (b.cell.gx + 1) * s + radius;
+      const maxY = (b.cell.gy + 1) * s + radius;
       if (x > minX && x < maxX && y > minY && y < maxY) return true;
     }
     return false;
@@ -1206,6 +1231,7 @@ export class ForestScene extends Phaser.Scene {
         hp: spec.maxHp, maxHp: spec.maxHp,
         lastFireAt: 0
       });
+      this.placedExitKey = key;
       this.burstParticles(x, y, { colors: spec.burstColors, count: 32, size: 4, speed: 150, life: 650 });
       this.hud.flashToast(`${spec.label}placed (-${this.formatCosts(spec.costs)})`);
       return;
@@ -1219,6 +1245,7 @@ export class ForestScene extends Phaser.Scene {
       isMetal: spec.type === 'metal',
       isDiamond: spec.type === 'diamond'
     });
+    this.placedExitKey = key;
     this.burstParticles(x, y, { colors: spec.burstColors, count: 32, size: 4, speed: 150, life: 650 });
     this.hud.flashToast(`${spec.label}room built (-${this.formatCosts(spec.costs)})`);
   }
