@@ -31,7 +31,14 @@ export const RECIPES = {
     desc: 'One-time. Place a fire pit by the tent. Feed it wood at dusk to stay warm at night.',
     flag: 'campfireBuilt',
     cost: { wood: 3 }
+  },
+  diamond: {
+    id: 'diamond',
+    name: 'Diamond',
+    desc: 'Forge 3 iron into 1 diamond. Used to build the toughest rooms.',
+    item: { key: 'diamond', amount: 1 },
+    cost: { iron: 3 }
   }
 };
 
-export const RECIPES_ORDER = ['axe', 'spear', 'campfire', 'trailMix'];
+export const RECIPES_ORDER = ['axe', 'spear', 'campfire', 'trailMix', 'diamond'];

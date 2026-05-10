@@ -378,6 +378,50 @@ export function drawRoom(scene, cx, cy, size) {
   return c;
 }
 
+// Diamond room — pale crystalline floor, gem-cut walls with bright facets.
+export function drawDiamondRoom(scene, cx, cy, size) {
+  const c = scene.add.container(cx, cy);
+  const half = size / 2;
+  const inset = 4;
+  // Crystal floor
+  const floor = scene.add.rectangle(0, 0, size - inset * 2, size - inset * 2, 0x9ce6ee)
+    .setStrokeStyle(2, 0x2a6a8a);
+  c.add(floor);
+  // Faint diagonal facet lines
+  const facets = scene.add.graphics();
+  facets.lineStyle(1, 0x4aa8d8, 0.5);
+  for (let i = -3; i <= 3; i++) {
+    const off = i * ((size - inset * 2) / 4);
+    facets.beginPath();
+    facets.moveTo(-half + inset, -half + inset + off);
+    facets.lineTo(half - inset - off, half - inset);
+    facets.strokePath();
+  }
+  c.add(facets);
+  // Gem walls
+  const wallColor = 0x6ad8e8;
+  const wallStroke = 0x1a4a8a;
+  const wallThick = 8;
+  const top = scene.add.rectangle(0, -half + wallThick / 2, size, wallThick, wallColor).setStrokeStyle(1, wallStroke);
+  const bot = scene.add.rectangle(0, half - wallThick / 2, size, wallThick, wallColor).setStrokeStyle(1, wallStroke);
+  const lef = scene.add.rectangle(-half + wallThick / 2, 0, wallThick, size, wallColor).setStrokeStyle(1, wallStroke);
+  const rig = scene.add.rectangle(half - wallThick / 2, 0, wallThick, size, wallColor).setStrokeStyle(1, wallStroke);
+  // Corner gems — small bright diamonds
+  const gemColor = 0xffffff;
+  const corners = [
+    [-half + wallThick, -half + wallThick],
+    [ half - wallThick, -half + wallThick],
+    [-half + wallThick,  half - wallThick],
+    [ half - wallThick,  half - wallThick]
+  ];
+  const gems = corners.map(([x, y]) =>
+    scene.add.polygon(x, y, [0, -3, 3, 0, 0, 3, -3, 0], gemColor).setStrokeStyle(1, 0x4aa8d8)
+  );
+  c.add([top, bot, lef, rig, ...gems]);
+  c.setDepth(2);
+  return c;
+}
+
 // Ghost room used for placement preview — same shape but tinted, no walls.
 export function drawGhostRoom(scene, size) {
   const g = scene.add.rectangle(0, 0, size - 8, size - 8, 0x55ff77, 0.25)

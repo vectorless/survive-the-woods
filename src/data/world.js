@@ -74,12 +74,17 @@ export const INTERACT_RADIUS = 56;
 
 // Building system — F to enter build mode, SPACE to place a room.
 export const BUILDING = {
-  cellSize: 80,         // grid pitch + room footprint
+  cellSize: 80,            // grid pitch + room footprint
   woodPerRoom: 6,
   ironPerMetalRoom: 4,
-  roomHp: 20,           // wolf bites a wood room takes to break it
-  metalRoomHp: 40       // 2× tougher
+  diamondPerDiamondRoom: 2,
+  roomHp: 20,              // wolf bites a wood room takes to break
+  metalRoomHp: 40,         // 2× tougher
+  diamondRoomHp: 80        // 4× tougher
 };
+
+// Crafted at the workbench from iron — used to build diamond rooms.
+export const DIAMOND_PER_CRAFT = 3;
 
 // 45% of rocks spawn as iron — same shape, bluish tint. Iron ore drops 1 iron
 // instead of 1 stone when mined.

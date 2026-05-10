@@ -10,7 +10,7 @@ import {
   drawGround, drawTent, drawTree, drawStump, drawBush, drawRock, drawIronRock,
   drawStick, drawMushroom,
   drawPond, drawCampfire, drawWolf, drawBoss, drawPlayer, makeNightOverlay, makeWarmHalo, mulberry32,
-  drawRoom, drawMetalRoom, drawGhostRoom
+  drawRoom, drawMetalRoom, drawDiamondRoom, drawGhostRoom
 } from '../world/forestRender.js';
 import { WalkController } from '../controllers/WalkController.js';
 import {
@@ -116,7 +116,7 @@ export class ForestScene extends Phaser.Scene {
 
     // Building mode — F toggles, SPACE places, TAB switches material.
     this.buildingMode = false;
-    this.currentRoomType = 'wood'; // 'wood' | 'metal'
+    this.currentRoomType = 'wood'; // 'wood' | 'metal' | 'diamond'
     this.rooms = new Map();
     this.ghostRoom = drawGhostRoom(this, BUILDING.cellSize);
     this.input.keyboard.addCapture('TAB'); // stop browser stealing focus
@@ -126,7 +126,9 @@ export class ForestScene extends Phaser.Scene {
     });
     this.input.keyboard.on('keydown-TAB', () => {
       if (!this.buildingMode) return;
-      this.currentRoomType = this.currentRoomType === 'wood' ? 'metal' : 'wood';
+      const cycle = ['wood', 'metal', 'diamond'];
+      const i = cycle.indexOf(this.currentRoomType);
+      this.currentRoomType = cycle[(i + 1) % cycle.length];
       this.hud.flashToast(`build: ${this.currentRoomType}`);
     });
     this.input.keyboard.on('keydown-ESC', () => {
@@ -496,7 +498,8 @@ export class ForestScene extends Phaser.Scene {
     this.burstParticles(wolf.visual.x, wolf.visual.y, {
       colors: [0x6b3a1f, 0x8a5b3a, 0xf4e4bc], count: wolf.isBoss ? 16 : 8, size: 3, speed: wolf.isBoss ? 170 : 130, life: 420
     });
-    this.hud.flashToast(`${room.isMetal ? 'metal ' : ''}room ${Math.max(0, room.hp)}/${room.maxHp ?? BUILDING.roomHp}`);
+    const label = room.isDiamond ? 'diamond ' : room.isMetal ? 'metal ' : '';
+    this.hud.flashToast(`${label}room ${Math.max(0, room.hp)}/${room.maxHp ?? BUILDING.roomHp}`);
     if (room.hp <= 0) this.destroyRoom(room);
   }
 
@@ -544,22 +547,46 @@ export class ForestScene extends Phaser.Scene {
 
   // --- Targeting + interact ------------------------------------------------
 
+  // Maps the current build type → material/cost/hp/visual/ghost-color.
+  roomSpec(type = this.currentRoomType) {
+    if (type === 'metal') {
+      return {
+        type, matKey: 'iron', matCost: BUILDING.ironPerMetalRoom, maxHp: BUILDING.metalRoomHp,
+        draw: drawMetalRoom, ghostColor: 0x6ad8e8,
+        burstColors: [0x5a6a7a, 0x9aaab8, 0xc4d4e4],
+        label: 'metal '
+      };
+    }
+    if (type === 'diamond') {
+      return {
+        type, matKey: 'diamond', matCost: BUILDING.diamondPerDiamondRoom, maxHp: BUILDING.diamondRoomHp,
+        draw: drawDiamondRoom, ghostColor: 0xffffff,
+        burstColors: [0x9ce6ee, 0xffffff, 0x6ad8e8, 0x4aa8d8],
+        label: 'diamond '
+      };
+    }
+    return {
+      type: 'wood', matKey: 'wood', matCost: BUILDING.woodPerRoom, maxHp: BUILDING.roomHp,
+      draw: drawRoom, ghostColor: 0x55ff77,
+      burstColors: [0x6b3a1f, 0x8a5b3a, 0xf4e4bc],
+      label: ''
+    };
+  }
+
   refreshTarget() {
     if (this.buildingMode) {
       this.target = null;
       this.targetRing.setVisible(false);
-      const isMetal = this.currentRoomType === 'metal';
-      const matKey = isMetal ? 'iron' : 'wood';
-      const matCost = isMetal ? BUILDING.ironPerMetalRoom : BUILDING.woodPerRoom;
-      const have = getItem(this.registry, matKey);
+      const spec = this.roomSpec();
+      const have = getItem(this.registry, spec.matKey);
       const cell = this.cellAtPlayer();
       const occupied = this.rooms.has(this.cellKey(cell));
       const reason = occupied
         ? '— cell taken'
-        : have < matCost
-          ? `— need ${matCost} ${matKey} (have ${have})`
+        : have < spec.matCost
+          ? `— need ${spec.matCost} ${spec.matKey} (have ${have})`
           : '';
-      this.hud.setPrompt(`BUILDING [${this.currentRoomType.toUpperCase()}] — SPACE place (${matCost} ${matKey}) · TAB switch · F/ESC exit ${reason}`);
+      this.hud.setPrompt(`BUILDING [${this.currentRoomType.toUpperCase()}] — SPACE place (${spec.matCost} ${spec.matKey}) · TAB switch · F/ESC exit ${reason}`);
       return;
     }
     const px = this.player.x, py = this.player.y;
@@ -967,15 +994,11 @@ export class ForestScene extends Phaser.Scene {
     const { x, y } = this.cellCenter(cell);
     this.ghostRoom.x = x;
     this.ghostRoom.y = y;
-    const isMetal = this.currentRoomType === 'metal';
-    const matKey = isMetal ? 'iron' : 'wood';
-    const matCost = isMetal ? BUILDING.ironPerMetalRoom : BUILDING.woodPerRoom;
+    const spec = this.roomSpec();
     const occupied = this.rooms.has(this.cellKey(cell));
-    const canAfford = getItem(this.registry, matKey) >= matCost;
+    const canAfford = getItem(this.registry, spec.matKey) >= spec.matCost;
     const ok = !occupied && canAfford;
-    // Wood ghost = green, metal ghost = blue-silver, blocked = red.
-    const okColor = isMetal ? 0x6ad8e8 : 0x55ff77;
-    const color = ok ? okColor : 0xff5555;
+    const color = ok ? spec.ghostColor : 0xff5555;
     this.ghostRoom.setFillStyle(color, 0.25);
     this.ghostRoom.setStrokeStyle(3, color, 0.9);
   }
@@ -987,24 +1010,22 @@ export class ForestScene extends Phaser.Scene {
       this.hud.flashToast('already a room here');
       return;
     }
-    const isMetal = this.currentRoomType === 'metal';
-    const matKey = isMetal ? 'iron' : 'wood';
-    const matCost = isMetal ? BUILDING.ironPerMetalRoom : BUILDING.woodPerRoom;
-    if (!removeItem(this.registry, matKey, matCost)) {
-      this.hud.flashToast(`need ${matCost} ${matKey}`);
+    const spec = this.roomSpec();
+    if (!removeItem(this.registry, spec.matKey, spec.matCost)) {
+      this.hud.flashToast(`need ${spec.matCost} ${spec.matKey}`);
       return;
     }
     const { x, y } = this.cellCenter(cell);
-    const visual = isMetal
-      ? drawMetalRoom(this, x, y, BUILDING.cellSize)
-      : drawRoom(this, x, y, BUILDING.cellSize);
-    const maxHp = isMetal ? BUILDING.metalRoomHp : BUILDING.roomHp;
-    this.rooms.set(key, { cell, visual, hp: maxHp, maxHp, isMetal });
-    const colors = isMetal
-      ? [0x5a6a7a, 0x9aaab8, 0xc4d4e4]
-      : [0x6b3a1f, 0x8a5b3a, 0xf4e4bc];
-    this.burstParticles(x, y, { colors, count: 32, size: 4, speed: 150, life: 650 });
-    this.hud.flashToast(`${isMetal ? 'metal ' : ''}room built (-${matCost} ${matKey})`);
+    const visual = spec.draw(this, x, y, BUILDING.cellSize);
+    this.rooms.set(key, {
+      cell, visual,
+      hp: spec.maxHp, maxHp: spec.maxHp,
+      type: spec.type,
+      isMetal: spec.type === 'metal',
+      isDiamond: spec.type === 'diamond'
+    });
+    this.burstParticles(x, y, { colors: spec.burstColors, count: 32, size: 4, speed: 150, life: 650 });
+    this.hud.flashToast(`${spec.label}room built (-${spec.matCost} ${spec.matKey})`);
   }
 
   // --- Time skip ----------------------------------------------------------

@@ -27,7 +27,8 @@ Top-down forest survival. Pick berries → eat → craft tools → survive night
 | `Q` | Eat (trail mix first, then berry) |
 | `Z` | Open inventory |
 | `F` | Toggle building mode (ghost room snaps to a 80px grid at your feet) |
-| `SPACE` | (in building mode) Place a room — costs 6 wood |
+| `TAB` | (in building mode) Cycle material: wood → metal → diamond |
+| `SPACE` | (in building mode) Place a room — 6 wood / 4 iron / 2 diamond depending on material (HP 20 / 40 / 80) |
 | `1` | Hotbar slot — toggle axe |
 | `2` | Hotbar slot — toggle spear |
 | `3` | Hotbar slot — eat berry |

@@ -12,7 +12,7 @@ export class CraftScene extends Phaser.Scene {
     this.add.rectangle(0, 0, width, height, 0x000000, 0.6).setOrigin(0).setScrollFactor(0);
 
     const panelW = 480;
-    const panelH = 440;
+    const panelH = 520;
     const panelX = (width - panelW) / 2;
     const panelY = (height - panelH) / 2;
     const panel = this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x1f2418, 0.95).setStrokeStyle(2, 0xc4734a);
@@ -78,7 +78,7 @@ export class CraftScene extends Phaser.Scene {
   refreshAll() {
     const inv = this.registry.get('inventory') || {};
     this.invText.setText(
-      `wood ${inv.wood||0}   stone ${inv.stone||0}   berries ${inv.berries||0}   trail-mix ${inv.trailMix||0}`
+      `wood ${inv.wood||0}  stone ${inv.stone||0}  iron ${inv.iron||0}  diamond ${inv.diamond||0}  berries ${inv.berries||0}  mix ${inv.trailMix||0}`
     );
     for (const card of this.cards) {
       const recipe = RECIPES[card.id];

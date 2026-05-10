@@ -7,6 +7,7 @@ const ITEMS = [
   { key: 'wood',     name: 'Wood',       color: 0x6b3a1f, draw: drawWoodIcon },
   { key: 'stone',    name: 'Stone',      color: 0x6e6e74, draw: drawStoneIcon },
   { key: 'iron',     name: 'Iron',       color: 0x5a6a7a, draw: drawIronIcon },
+  { key: 'diamond',  name: 'Diamond',    color: 0x9ce6ee, draw: drawDiamondIcon },
   { key: 'berries',  name: 'Berries',    color: 0xd1373a, draw: drawBerryIcon },
   { key: 'trailMix', name: 'Trail Mix',  color: 0xc4a47a, draw: drawTrailMixIcon },
   { key: 'mushroom', name: 'Mushroom',   color: 0xc4373a, draw: drawMushroomIcon },
@@ -23,7 +24,7 @@ export class InventoryScene extends Phaser.Scene {
     this.add.rectangle(0, 0, width, height, 0x000000, 0.55).setOrigin(0).setScrollFactor(0);
 
     const panelW = 380;
-    const panelH = 520;
+    const panelH = 580;
     this.add.rectangle(width / 2, height / 2, panelW, panelH, 0x1f2418, 0.95).setStrokeStyle(2, 0xc4734a);
 
     const panelX = (width - panelW) / 2;
@@ -108,6 +109,12 @@ function drawIronIcon(scene, x, y) {
   scene.add.polygon(x, y - 2, [-6, -4, 2, -7, 4, -2, -2, 0], 0x9aaab8);
   scene.add.circle(x - 3, y - 3, 1.4, 0xe4ecf4);
   scene.add.circle(x + 4, y + 1, 1.2, 0xc4d4e4);
+}
+
+function drawDiamondIcon(scene, x, y) {
+  scene.add.polygon(x, y, [0, -10, 9, -2, 0, 10, -9, -2], 0x9ce6ee).setStrokeStyle(1, 0x1a4a8a);
+  scene.add.polygon(x, y - 1, [-5, -3, 5, -3, 0, 3], 0xffffff).setStrokeStyle(1, 0x4aa8d8);
+  scene.add.line(0, 0, x - 9, y - 2, x + 9, y - 2, 0x4aa8d8).setLineWidth(1);
 }
 
 function drawBerryIcon(scene, x, y) {

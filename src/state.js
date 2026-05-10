@@ -11,7 +11,7 @@ export function initState(registry) {
   registry.set('health', MAX_BAR);
   registry.set('stamina', MAX_BAR);
 
-  registry.set('inventory', { wood: 0, stone: 0, iron: 0, berries: 0, trailMix: 0, mushroom: 0, fish: 0 });
+  registry.set('inventory', { wood: 0, stone: 0, iron: 0, diamond: 0, berries: 0, trailMix: 0, mushroom: 0, fish: 0 });
   registry.set('ownedTools', []);   // 'axe' / 'spear'
   registry.set('equipped', null);   // 'axe' | 'spear' | null
 
