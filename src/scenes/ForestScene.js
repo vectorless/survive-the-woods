@@ -119,6 +119,10 @@ export class ForestScene extends Phaser.Scene {
     this.currentRoomType = 'wood'; // 'wood' | 'metal' | 'diamond'
     this.rooms = new Map();
     this.ghostRoom = drawGhostRoom(this, BUILDING.cellSize);
+    this.ghostLabel = this.add.text(0, 0, '', {
+      fontFamily: 'monospace', fontSize: '13px', color: '#f4e4bc',
+      backgroundColor: '#000000', padding: { x: 6, y: 3 }
+    }).setOrigin(0.5, 1).setDepth(41).setVisible(false);
     this.input.keyboard.addCapture('TAB'); // stop browser stealing focus
     this.input.keyboard.on('keydown-F', () => this.toggleBuildingMode());
     this.input.keyboard.on('keydown-SPACE', () => {
@@ -962,6 +966,7 @@ export class ForestScene extends Phaser.Scene {
   toggleBuildingMode() {
     this.buildingMode = !this.buildingMode;
     this.ghostRoom.setVisible(this.buildingMode);
+    this.ghostLabel.setVisible(this.buildingMode);
     if (!this.buildingMode) {
       this.hud.flashToast('build mode off');
     } else {
@@ -996,11 +1001,20 @@ export class ForestScene extends Phaser.Scene {
     this.ghostRoom.y = y;
     const spec = this.roomSpec();
     const occupied = this.rooms.has(this.cellKey(cell));
-    const canAfford = getItem(this.registry, spec.matKey) >= spec.matCost;
+    const have = getItem(this.registry, spec.matKey);
+    const canAfford = have >= spec.matCost;
     const ok = !occupied && canAfford;
     const color = ok ? spec.ghostColor : 0xff5555;
     this.ghostRoom.setFillStyle(color, 0.25);
     this.ghostRoom.setStrokeStyle(3, color, 0.9);
+
+    // Label above the ghost: material name, cost, and your stock.
+    const name = spec.type.toUpperCase();
+    this.ghostLabel.x = x;
+    this.ghostLabel.y = y - BUILDING.cellSize / 2 - 6;
+    this.ghostLabel.setText(`${name}  ${spec.matCost} ${spec.matKey} (${have})`);
+    const hex = '#' + spec.ghostColor.toString(16).padStart(6, '0');
+    this.ghostLabel.setColor(ok ? hex : '#ff8a8a');
   }
 
   tryPlaceRoom() {
